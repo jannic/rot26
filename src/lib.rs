@@ -1,3 +1,9 @@
+#[cfg(feature = "rayon")]
+extern crate rayon;
+
+#[cfg(feature = "rayon")]
+use rayon::prelude::*;
+
 use std::ffi::{CStr, CString};
 use std::os::raw::c_char;
 use std::{mem, ptr};
@@ -47,7 +53,7 @@ pub extern fn rot26_encrypt_any(input: *const c_char, amount: u32) -> *const c_c
         Ok(input) => input,
         Err(_) => return ptr::null()
     };
-    let output: String = input.chars().map(|c| {
+    let closure = |c| {
         let base = if c > 'a' && c < 'z' {
             'a' as u32
         } else if c > 'A' && c < 'Z' {
@@ -57,7 +63,13 @@ pub extern fn rot26_encrypt_any(input: *const c_char, amount: u32) -> *const c_c
         };
 
         std::char::from_u32(((c as u32 - base + amount) % ROTATE) + base).unwrap()
-    }).collect();
+    };
+    let output: String = {
+        #[cfg(not(feature = "rayon"))]
+        { input.chars().map(closure).collect() }
+        #[cfg(feature = "rayon")]
+        { input.par_chars().map(closure).collect() }
+    };
     let output = match CString::new(output) {
         Ok(output) => output,
         Err(_) => return ptr::null()
@@ -76,7 +88,7 @@ pub extern fn rot26_decrypt_any(input: *const c_char, amount: u32) -> *const c_c
         Ok(input) => input,
         Err(_) => return ptr::null()
     };
-    let output: String = input.chars().map(|c| {
+    let closure = |c| {
         let base = if c > 'a' && c < 'z' {
             'a' as u32
         } else if c > 'A' && c < 'Z' {
@@ -86,7 +98,13 @@ pub extern fn rot26_decrypt_any(input: *const c_char, amount: u32) -> *const c_c
         };
 
         std::char::from_u32(((c as u32 - base + ROTATE - amount) % ROTATE) + base).unwrap()
-    }).collect();
+    };
+    let output: String = {
+        #[cfg(not(feature = "rayon"))]
+        { input.chars().map(closure).collect() }
+        #[cfg(feature = "rayon")]
+        { input.par_chars().map(closure).collect() }
+    };
     let output = match CString::new(output) {
         Ok(output) => output,
         Err(_) => return ptr::null()
@@ -94,4 +112,45 @@ pub extern fn rot26_decrypt_any(input: *const c_char, amount: u32) -> *const c_c
     let ptr = output.as_ptr();
     mem::forget(output);
     ptr
+}
+
+#[cfg(test)]
+mod tests {
+    use ::*;
+
+    #[test]
+    fn test_rot26() {
+        let plain = "hello";
+        let encrypted = encrypt(plain);
+
+        assert_eq!(encrypted, "hello");
+
+        let decrypted = decrypt(&encrypted);
+
+        assert_eq!(plain, decrypted);
+    }
+    #[test]
+    fn test_rot13() {
+        let plain = "hello";
+        let encrypted = encrypt_rot13(plain);
+
+        assert_eq!(encrypted, "uryyb");
+
+        let decrypted = decrypt_rot13(&encrypted);
+
+        assert_eq!(plain, decrypted);
+    }
+    #[test]
+    fn test_rot_any() {
+        let amount = 1;
+
+        let plain = "hello";
+        let encrypted = encrypt_any(plain, amount);
+
+        assert_eq!(encrypted, "ifmmp");
+
+        let decrypted = decrypt_any(&encrypted, amount);
+
+        assert_eq!(plain, decrypted);
+    }
 }

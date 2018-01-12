@@ -15,6 +15,14 @@ That and all the following are features now possible thanks to Rust:
  - Complete unicode support. Disregards any non-alphabetical symbols! (was probably possible before actually)
  - Unit tests.
 
+## Speeeeeeeed
+
+If being able to actually run this heavy algorithm on your computer isn't facinating enough,
+you can also use `rayon` for multithreading!  
+Simply use it with the `rayon` feature. But by default, rot26 is and forever will be\* without dependencies.
+
+\* no promises
+
 # Support for C!
 
 Because C is the mostly used language, we've spent more time porting this algorithm than it would take to rewrite it in C.  
