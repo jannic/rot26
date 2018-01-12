@@ -6,4 +6,7 @@ name = "rot26"
 repository = "https://github.com/jD91mZM2/rot26"
 version = "0.1.0"
 
+[lib]
+crate-type = ["staticlib"]
+
 [dependencies]

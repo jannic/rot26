@@ -15,16 +15,18 @@ That and all the following are features now possible thanks to Rust:
  - Complete unicode support. Disregards any non-alphabetical symbols! (was probably possible before actually)
  - Unit tests.
 
-# Examples
+# Support for C!
 
-Simply call `rot26::encrypt` on any string. For example:
+Because C is the mostly used language, we've spent more time porting this algorithm than it would take to rewrite it in C.  
+Now you can get Rust's awesome unicode support while still using C!  
+It's kind of like buying a new saddle for your dead horse!
 
-```Rust
-rot26::encrypt("hello") // returns "hello"
-```
+Simply include `rot26.h`!
 
-to decrypt, use `rot26::decrypt`
+Example:
+```C
+const char* encrypted = rot26_encrypt("hello");
+puts(encrypted);
 
-```Rust
-rot26::decrypt("hello") // returns "hello"
+rot26_free(encrypted);
 ```

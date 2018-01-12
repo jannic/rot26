@@ -1,38 +1,53 @@
+use std::ffi::{CStr, CString};
+use std::os::raw::c_char;
+use std::{mem, ptr};
+
 const ROTATE: u32 = 'z' as u32 - 'a' as u32 + 1;
 
+/// Frees the Rust-owned string in a safe way
+#[no_mangle]
+pub extern fn rot26_free(input: *mut c_char) {
+    unsafe { CString::from_raw(input); }
+}
+
 /// Encrypts the input using rot26.
-#[inline(always)]
-pub fn encrypt(input: &str) -> String {
-    encrypt_any(input, 26)
+#[no_mangle]
+pub extern fn rot26_encrypt(input: *const c_char) -> *const c_char {
+    rot26_encrypt_any(input, 26)
 }
 
 /// Decrypts the input using rot26.
-#[inline(always)]
-pub fn decrypt(input: &str) -> String {
-    decrypt_any(input, 26)
+#[no_mangle]
+pub extern fn rot26_decrypt(input: *const c_char) -> *const c_char {
+    rot26_decrypt_any(input, 26)
 }
 
 /// Encrypts the input using rot13.
 /// Warning: Security researchers have managed to crack rot13.
 /// New users are recommended to use rot26 for the best security.
-#[inline(always)]
-pub fn encrypt_rot13(input: &str) -> String {
-    encrypt_any(input, 13)
+#[no_mangle]
+pub extern fn rot26_encrypt_rot13(input: *const c_char) -> *const c_char {
+    rot26_encrypt_any(input, 13)
 }
 
 /// Decrypts the input using rot13.
 /// Warning: Security researchers have managed to crack rot13.
 /// New users are recommended to use rot26 for the best security.
-#[inline(always)]
-pub fn decrypt_rot13(input: &str) -> String {
-    decrypt_any(input, 13)
+#[no_mangle]
+pub extern fn rot26_decrypt_rot13(input: *const c_char) -> *const c_char {
+    rot26_decrypt_any(input, 13)
 }
 
 /// Encrypt using any amount.
 /// Warning: Please carefully choose the right amount.
 /// New users are recommended to use rot26 for the best security.
-pub fn encrypt_any(input: &str, amount: u32) -> String {
-    input.chars().map(|c| {
+#[no_mangle]
+pub extern fn rot26_encrypt_any(input: *const c_char, amount: u32) -> *const c_char {
+    let input = match unsafe { CStr::from_ptr(input).to_str() } {
+        Ok(input) => input,
+        Err(_) => return ptr::null()
+    };
+    let output: String = input.chars().map(|c| {
         let base = if c > 'a' && c < 'z' {
             'a' as u32
         } else if c > 'A' && c < 'Z' {
@@ -42,14 +57,26 @@ pub fn encrypt_any(input: &str, amount: u32) -> String {
         };
 
         std::char::from_u32(((c as u32 - base + amount) % ROTATE) + base).unwrap()
-    }).collect()
+    }).collect();
+    let output = match CString::new(output) {
+        Ok(output) => output,
+        Err(_) => return ptr::null()
+    };
+    let ptr = output.as_ptr();
+    mem::forget(output);
+    ptr
 }
 
 /// Decrypt using any amount.
 /// Warning: Please carefully choose the right amount.
 /// New users are recommended to use rot26 for the best security.
-pub fn decrypt_any(input: &str, amount: u32) -> String {
-    input.chars().map(|c| {
+#[no_mangle]
+pub extern fn rot26_decrypt_any(input: *const c_char, amount: u32) -> *const c_char {
+    let input = match unsafe { CStr::from_ptr(input).to_str() } {
+        Ok(input) => input,
+        Err(_) => return ptr::null()
+    };
+    let output: String = input.chars().map(|c| {
         let base = if c > 'a' && c < 'z' {
             'a' as u32
         } else if c > 'A' && c < 'Z' {
@@ -59,46 +86,12 @@ pub fn decrypt_any(input: &str, amount: u32) -> String {
         };
 
         std::char::from_u32(((c as u32 - base + ROTATE - amount) % ROTATE) + base).unwrap()
-    }).collect()
-}
-
-#[cfg(test)]
-mod tests {
-    use ::*;
-
-    #[test]
-    fn test_rot26() {
-        let plain = "hello";
-        let encrypted = encrypt(plain);
-
-        assert_eq!(encrypted, "hello");
-
-        let decrypted = decrypt(&encrypted);
-
-        assert_eq!(plain, decrypted);
-    }
-    #[test]
-    fn test_rot13() {
-        let plain = "hello";
-        let encrypted = encrypt_rot13(plain);
-
-        assert_eq!(encrypted, "uryyb");
-
-        let decrypted = decrypt_rot13(&encrypted);
-
-        assert_eq!(plain, decrypted);
-    }
-    #[test]
-    fn test_rot_any() {
-        let amount = 1;
-
-        let plain = "hello";
-        let encrypted = encrypt_any(plain, amount);
-
-        assert_eq!(encrypted, "ifmmp");
-
-        let decrypted = decrypt_any(&encrypted, amount);
-
-        assert_eq!(plain, decrypted);
-    }
+    }).collect();
+    let output = match CString::new(output) {
+        Ok(output) => output,
+        Err(_) => return ptr::null()
+    };
+    let ptr = output.as_ptr();
+    mem::forget(output);
+    ptr
 }
